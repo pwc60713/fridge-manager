@@ -282,6 +282,20 @@ body {
 </div>
 
 <div class="list" id="food-list"></div>
+
+<!-- SHOPPING LIST PAGE -->
+<div class="list" id="shopping-page" style="display:none;">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+    <div style="font-size:16px;font-weight:500;">購物清單</div>
+    <button id="shop-add-btn" style="padding:6px 14px;border-radius:10px;background:var(--accent);color:#fff;border:none;font-size:13px;cursor:pointer;font-family:inherit;">+ 新增</button>
+  </div>
+  <div id="shop-list"></div>
+  <div id="shop-empty" style="display:none;text-align:center;padding:48px 20px;color:var(--text-muted);">
+    <div style="font-size:40px;margin-bottom:12px;">🛒</div>
+    <div>清單是空的</div>
+  </div>
+</div>
+
 <div class="list" id="settings-page" style="display:none;">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
     <div style="font-size:16px;font-weight:500;">食材資料庫</div>
@@ -331,10 +345,51 @@ body {
     <div style="font-size:20px;">🧊</div>
     <div style="font-size:10px;color:var(--accent);font-weight:500;">冰箱</div>
   </button>
+  <button class="tab-btn" id="tab-shopping" onclick="switchTab('shopping')" style="flex:1;background:none;border:none;cursor:pointer;font-family:inherit;padding:4px 0;">
+    <div style="font-size:20px;">🛒</div>
+    <div style="font-size:10px;color:var(--text-muted);">購物清單</div>
+  </button>
   <button class="tab-btn" id="tab-settings" onclick="switchTab('settings')" style="flex:1;background:none;border:none;cursor:pointer;font-family:inherit;padding:4px 0;">
     <div style="font-size:20px;">📋</div>
     <div style="font-size:10px;color:var(--text-muted);">食材設定</div>
   </button>
+</div>
+
+<!-- SHOP ADD MODAL -->
+<div class="modal-overlay" id="shop-add-modal">
+  <div class="modal-sheet">
+    <h3>新增購物項目</h3>
+    <input class="modal-input" id="shop-name-input" placeholder="食材名稱..." maxlength="20" autocomplete="off" />
+    <div class="suggest-list" id="shop-suggest-list"></div>
+    <div class="modal-actions">
+      <button class="modal-btn" id="shop-cancel">取消</button>
+      <button class="modal-btn confirm" id="shop-confirm">新增</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD TO FRIDGE MODAL -->
+<div class="modal-overlay" id="add-to-fridge-modal">
+  <div class="modal-sheet">
+    <h3 id="atf-title">加入冰箱</h3>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">購買日期</div>
+    <input class="modal-input" type="date" id="atf-buy-date" style="margin-bottom:8px;" />
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">分類</div>
+    <select class="modal-select" id="atf-cat" style="width:100%;margin-bottom:8px;">
+      <option value="veg">🥬 蔬菜</option>
+      <option value="meat">🥩 肉類</option>
+      <option value="seafood">🐟 海鮮</option>
+      <option value="condiment">🧂 調味料</option>
+      <option value="other">📦 其他</option>
+    </select>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">建議保存天數</div>
+    <input class="modal-input" type="number" id="atf-days" placeholder="天" min="1" max="365" style="margin-bottom:4px;" />
+    <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px;" id="atf-preview"></div>
+    <div class="modal-actions">
+      <button class="modal-btn" id="atf-cancel">取消</button>
+      <button class="modal-btn confirm" id="atf-confirm">加入冰箱</button>
+    </div>
+  </div>
 </div>
 
 <!-- DB EDIT MODAL -->
@@ -640,14 +695,17 @@ document.getElementById('add-btn').onclick = openAddModal;
 function switchTab(tab) {
   document.getElementById('food-list').style.display = tab === 'fridge' ? 'block' : 'none';
   document.getElementById('settings-page').style.display = tab === 'settings' ? 'block' : 'none';
+  document.getElementById('shopping-page').style.display = tab === 'shopping' ? 'block' : 'none';
   document.getElementById('add-btn').style.display = tab === 'fridge' ? 'flex' : 'none';
   const filterRow = document.getElementById('filter-row');
   const statsBar = document.getElementById('stats-bar');
   if (filterRow) filterRow.style.display = tab === 'fridge' ? 'flex' : 'none';
   if (statsBar) statsBar.style.display = tab === 'fridge' ? 'flex' : 'none';
   document.getElementById('tab-fridge').querySelector('div:last-child').style.color = tab === 'fridge' ? 'var(--accent)' : 'var(--text-muted)';
+  document.getElementById('tab-shopping').querySelector('div:last-child').style.color = tab === 'shopping' ? 'var(--accent)' : 'var(--text-muted)';
   document.getElementById('tab-settings').querySelector('div:last-child').style.color = tab === 'settings' ? 'var(--accent)' : 'var(--text-muted)';
   if (tab === 'settings') renderDbList();
+  if (tab === 'shopping') renderShopList();
 }
 
 // DB management
@@ -755,6 +813,177 @@ document.getElementById('db-save').onclick = () => {
   document.getElementById('db-food-name').disabled = false;
   dbEditingKey = null;
   renderDbList();
+};
+
+// ===== SHOPPING LIST =====
+function getShopList() {
+  if (!appData.shopping) appData.shopping = [];
+  return appData.shopping;
+}
+
+function renderShopList() {
+  const list = document.getElementById('shop-list');
+  const empty = document.getElementById('shop-empty');
+  const items = getShopList();
+
+  // Auto-clear bought items if it's a new day
+  const lastDate = appData.shopClearDate;
+  const todayStr = today();
+  if (lastDate && lastDate !== todayStr) {
+    appData.shopping = appData.shopping.filter(i => !i.bought);
+    appData.shopClearDate = todayStr;
+    saveData();
+  }
+
+  list.innerHTML = '';
+  const pending = items.filter(i => !i.bought);
+  const bought = items.filter(i => i.bought);
+
+  if (items.length === 0) {
+    empty.style.display = 'block';
+    list.style.display = 'none';
+    return;
+  }
+  empty.style.display = 'none';
+  list.style.display = 'block';
+
+  function renderShopItem(item, idx) {
+    const realIdx = items.indexOf(item);
+    const el = document.createElement('div');
+    el.style.cssText = `background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:12px;${item.bought ? 'opacity:0.5;' : ''}`;
+    el.innerHTML = `
+      <div style="width:22px;height:22px;border-radius:50%;border:2px solid ${item.bought ? 'var(--ok)' : 'var(--border)'};background:${item.bought ? 'var(--ok)' : 'none'};flex-shrink:0;display:flex;align-items:center;justify-content:center;cursor:pointer;" class="shop-check" data-idx="${realIdx}">
+        ${item.bought ? '<span style="color:#fff;font-size:12px;">✓</span>' : ''}
+      </div>
+      <div style="flex:1;font-size:15px;${item.bought ? 'text-decoration:line-through;' : ''}">${item.name}</div>
+      <button style="background:none;border:none;color:rgba(80,140,180,0.3);font-size:18px;cursor:pointer;" class="shop-del" data-idx="${realIdx}">×</button>
+    `;
+    el.querySelector('.shop-check').onclick = () => {
+      if (!item.bought) openAddToFridge(realIdx);
+      else {
+        items[realIdx].bought = false;
+        delete items[realIdx].boughtDate;
+        saveData();
+        renderShopList();
+      }
+    };
+    el.querySelector('.shop-del').onclick = () => {
+      showConfirm(`確定要刪除「${item.name}」嗎？`, () => {
+        appData.shopping.splice(realIdx, 1);
+        saveData();
+        renderShopList();
+      });
+    };
+    list.appendChild(el);
+  }
+
+  if (pending.length > 0) {
+    const h = document.createElement('div');
+    h.className = 'section-header';
+    h.textContent = '待購買';
+    list.appendChild(h);
+    pending.forEach(item => renderShopItem(item));
+  }
+  if (bought.length > 0) {
+    const h = document.createElement('div');
+    h.className = 'section-header';
+    h.textContent = '已買到 ✓';
+    list.appendChild(h);
+    bought.forEach(item => renderShopItem(item));
+  }
+}
+
+// Shop add modal
+document.getElementById('shop-add-btn').onclick = () => {
+  document.getElementById('shop-name-input').value = '';
+  document.getElementById('shop-suggest-list').classList.remove('open');
+  document.getElementById('shop-suggest-list').innerHTML = '';
+  document.getElementById('shop-add-modal').classList.add('open');
+  setTimeout(() => document.getElementById('shop-name-input').focus(), 100);
+};
+
+document.getElementById('shop-name-input').oninput = (e) => {
+  const q = e.target.value.trim();
+  const sl = document.getElementById('shop-suggest-list');
+  if (!q) { sl.classList.remove('open'); return; }
+  const db = getMergedDbFull();
+  const matches = Object.keys(db).filter(name => name.includes(q)).slice(0, 5);
+  if (matches.length === 0) { sl.classList.remove('open'); return; }
+  sl.innerHTML = '';
+  matches.forEach(name => {
+    const item = document.createElement('div');
+    item.className = 'suggest-item';
+    item.innerHTML = `<span>${name}</span>`;
+    item.onclick = () => {
+      document.getElementById('shop-name-input').value = name;
+      sl.classList.remove('open');
+    };
+    sl.appendChild(item);
+  });
+  sl.classList.add('open');
+};
+document.getElementById('shop-cancel').onclick = () => {
+  document.getElementById('shop-suggest-list').classList.remove('open');
+  document.getElementById('shop-add-modal').classList.remove('open');
+};
+document.getElementById('shop-confirm').onclick = () => {
+  const name = document.getElementById('shop-name-input').value.trim();
+  if (!name) return;
+  if (!appData.shopping) appData.shopping = [];
+  appData.shopping.push({ name, bought: false });
+  if (!appData.shopClearDate) appData.shopClearDate = today();
+  saveData();
+  document.getElementById('shop-add-modal').classList.remove('open');
+  renderShopList();
+};
+document.getElementById('shop-name-input').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('shop-confirm').click(); });
+
+// Add to fridge modal
+let atfIdx = -1;
+function openAddToFridge(idx) {
+  atfIdx = idx;
+  const item = appData.shopping[idx];
+  document.getElementById('atf-title').textContent = `「${item.name}」加入冰箱`;
+  document.getElementById('atf-buy-date').value = today();
+  document.getElementById('atf-preview').textContent = '';
+  // Auto-fill from DB
+  const db = getMergedDbFull();
+  if (db[item.name]) {
+    document.getElementById('atf-days').value = db[item.name].days;
+    document.getElementById('atf-cat').value = db[item.name].cat;
+    updateAtfPreview();
+  } else {
+    document.getElementById('atf-days').value = '';
+    document.getElementById('atf-cat').value = 'veg';
+  }
+  document.getElementById('add-to-fridge-modal').classList.add('open');
+}
+
+function updateAtfPreview() {
+  const buyDate = document.getElementById('atf-buy-date').value;
+  const days = parseInt(document.getElementById('atf-days').value);
+  if (!buyDate || !days) { document.getElementById('atf-preview').textContent = ''; return; }
+  const expire = new Date(buyDate);
+  expire.setDate(expire.getDate() + days);
+  document.getElementById('atf-preview').textContent = `預計 ${expire.toISOString().split('T')[0].replace(/-/g,'/')} 到期`;
+}
+document.getElementById('atf-buy-date').oninput = updateAtfPreview;
+document.getElementById('atf-days').oninput = updateAtfPreview;
+
+document.getElementById('atf-cancel').onclick = () => document.getElementById('add-to-fridge-modal').classList.remove('open');
+document.getElementById('atf-confirm').onclick = () => {
+  const buyDate = document.getElementById('atf-buy-date').value;
+  const days = parseInt(document.getElementById('atf-days').value);
+  const cat = document.getElementById('atf-cat').value;
+  if (!buyDate || !days) return;
+  const item = appData.shopping[atfIdx];
+  appData.foods.push({ name: item.name, cat, buyDate, days });
+  appData.shopping[atfIdx].bought = true;
+  appData.shopping[atfIdx].boughtDate = today();
+  saveData();
+  document.getElementById('add-to-fridge-modal').classList.remove('open');
+  renderShopList();
+  renderList();
 };
 
 // Init
