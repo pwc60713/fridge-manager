@@ -353,6 +353,10 @@ body {
     <div style="font-size:20px;">📋</div>
     <div style="font-size:10px;color:var(--text-muted);">食材設定</div>
   </button>
+  <button class="tab-btn" id="tab-recipe" onclick="switchTab('recipe')" style="flex:1;background:none;border:none;cursor:pointer;font-family:inherit;padding:4px 0;">
+    <div style="font-size:20px;">🍳</div>
+    <div style="font-size:10px;color:var(--text-muted);">食譜備餐</div>
+  </button>
 </div>
 
 <!-- SHOP ADD MODAL -->
@@ -418,6 +422,87 @@ body {
   <button id="export-btn" style="flex:1;padding:10px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text-muted);font-size:13px;font-family:inherit;cursor:pointer;">匯出備份</button>
   <label for="import-input" style="flex:1;padding:10px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text-muted);font-size:13px;font-family:inherit;cursor:pointer;text-align:center;display:block;">匯入備份</label>
   <input type="file" id="import-input" accept=".json" style="display:none;">
+</div>
+
+<!-- RECIPE PAGE -->
+<div class="list" id="recipe-page" style="display:none;">
+
+  <!-- 備餐規劃 -->
+  <div style="margin-bottom:16px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+      <div style="font-size:16px;font-weight:500;">🥡 備餐規劃</div>
+    </div>
+
+    <!-- 這一輪 -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:12px 14px;margin-bottom:10px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <div style="font-size:13px;font-weight:500;color:var(--accent);">這一輪</div>
+        <button id="plan-add-current" style="padding:3px 10px;border-radius:8px;background:var(--accent-light);border:1px solid var(--accent);color:var(--accent);font-size:11px;cursor:pointer;font-family:inherit;">＋ 加菜</button>
+      </div>
+      <div id="plan-current-list"></div>
+    </div>
+
+    <!-- 下一輪 -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:12px 14px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <div style="font-size:13px;font-weight:500;color:var(--ok);">下一輪</div>
+        <div style="display:flex;gap:6px;">
+          <button id="plan-promote" style="padding:3px 10px;border-radius:8px;background:var(--ok-light);border:1px solid var(--ok);color:var(--ok);font-size:11px;cursor:pointer;font-family:inherit;">升為這一輪</button>
+          <button id="plan-add-next" style="padding:3px 10px;border-radius:8px;background:var(--accent-light);border:1px solid var(--accent);color:var(--accent);font-size:11px;cursor:pointer;font-family:inherit;">＋ 加菜</button>
+        </div>
+      </div>
+      <div id="plan-next-list"></div>
+    </div>
+  </div>
+
+  <!-- 食譜庫 -->
+  <div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+      <div style="font-size:16px;font-weight:500;">📖 食譜庫</div>
+      <button id="recipe-add-btn" style="padding:6px 14px;border-radius:10px;background:var(--accent);color:#fff;border:none;font-size:13px;cursor:pointer;font-family:inherit;">＋ 新增食譜</button>
+    </div>
+    <div id="recipe-list"></div>
+    <div id="recipe-empty" style="text-align:center;padding:32px 20px;color:var(--text-muted);font-size:13px;">還沒有食譜，按右上角新增～</div>
+  </div>
+</div>
+
+<!-- RECIPE ADD/EDIT MODAL -->
+<div class="modal-overlay" id="recipe-modal">
+  <div class="modal-sheet">
+    <h3 id="recipe-modal-title">新增食譜</h3>
+    <input class="modal-input" id="recipe-name-input" placeholder="菜名..." maxlength="30" autocomplete="off" />
+    <textarea class="modal-input" id="recipe-content-input" placeholder="食材分量、步驟、注意事項..." rows="6" style="resize:none;line-height:1.6;font-size:13px;"></textarea>
+    <div class="modal-actions">
+      <button class="modal-btn" id="recipe-modal-cancel">取消</button>
+      <button class="modal-btn confirm" id="recipe-modal-save">儲存</button>
+    </div>
+    <button id="recipe-modal-delete" style="display:none;width:100%;margin-top:8px;padding:11px;border-radius:10px;border:1px solid rgba(192,57,43,0.3);background:none;color:#c0392b;font-size:14px;cursor:pointer;font-family:inherit;">刪除這份食譜</button>
+  </div>
+</div>
+
+<!-- ADD TO PLAN MODAL -->
+<div class="modal-overlay" id="plan-add-modal">
+  <div class="modal-sheet">
+    <h3 id="plan-add-title">加菜</h3>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:6px;">輸入菜名（可搜尋食譜庫）</div>
+    <input class="modal-input" id="plan-dish-input" placeholder="菜名..." maxlength="30" autocomplete="off" style="margin-bottom:4px;" />
+    <div id="plan-search-results" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:10px;margin-bottom:8px;overflow:hidden;max-height:160px;overflow-y:auto;"></div>
+    <div class="modal-actions">
+      <button class="modal-btn" id="plan-add-cancel">取消</button>
+      <button class="modal-btn confirm" id="plan-add-confirm">加入</button>
+    </div>
+  </div>
+</div>
+
+<!-- VIEW RECIPE MODAL -->
+<div class="modal-overlay" id="view-recipe-modal">
+  <div class="modal-sheet">
+    <h3 id="view-recipe-title">食譜</h3>
+    <div id="view-recipe-content" style="font-size:14px;line-height:1.8;color:var(--text);white-space:pre-wrap;max-height:300px;overflow-y:auto;padding:4px 0;"></div>
+    <div class="modal-actions" style="margin-top:12px;">
+      <button class="modal-btn confirm" id="view-recipe-close" style="flex:none;width:100%;">關閉</button>
+    </div>
+  </div>
 </div>
 
 <!-- CONFIRM DELETE -->
@@ -703,6 +788,7 @@ function switchTab(tab) {
   document.getElementById('food-list').style.display = tab === 'fridge' ? 'block' : 'none';
   document.getElementById('settings-page').style.display = tab === 'settings' ? 'block' : 'none';
   document.getElementById('shopping-page').style.display = tab === 'shopping' ? 'block' : 'none';
+  document.getElementById('recipe-page').style.display = tab === 'recipe' ? 'block' : 'none';
   document.getElementById('add-btn').style.display = tab === 'fridge' ? 'flex' : 'none';
   const filterRow = document.getElementById('filter-row');
   const statsBar = document.getElementById('stats-bar');
@@ -711,8 +797,10 @@ function switchTab(tab) {
   document.getElementById('tab-fridge').querySelector('div:last-child').style.color = tab === 'fridge' ? 'var(--accent)' : 'var(--text-muted)';
   document.getElementById('tab-shopping').querySelector('div:last-child').style.color = tab === 'shopping' ? 'var(--accent)' : 'var(--text-muted)';
   document.getElementById('tab-settings').querySelector('div:last-child').style.color = tab === 'settings' ? 'var(--accent)' : 'var(--text-muted)';
+  document.getElementById('tab-recipe').querySelector('div:last-child').style.color = tab === 'recipe' ? 'var(--accent)' : 'var(--text-muted)';
   if (tab === 'settings') renderDbList();
   if (tab === 'shopping') renderShopList();
+  if (tab === 'recipe') { renderRecipeList(); renderPlan(); }
 }
 
 // DB management
@@ -992,6 +1080,182 @@ document.getElementById('atf-confirm').onclick = () => {
   renderShopList();
   renderList();
 };
+
+// ===== RECIPE & MEAL PLAN =====
+function getRecipes() { if (!appData.recipes) appData.recipes = []; return appData.recipes; }
+function getPlan() { if (!appData.plan) appData.plan = { current: [], next: [] }; return appData.plan; }
+
+let recipeEditingId = null;
+let planTarget = null; // 'current' | 'next'
+let recipeNextId = 0;
+
+function renderRecipeList() {
+  const recipes = getRecipes();
+  const list = document.getElementById('recipe-list');
+  const empty = document.getElementById('recipe-empty');
+  if (!recipes.length) { list.innerHTML = ''; empty.style.display = 'block'; return; }
+  empty.style.display = 'none';
+  list.innerHTML = '';
+  recipes.forEach(r => {
+    const card = document.createElement('div');
+    card.style.cssText = 'background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:10px;cursor:pointer;';
+    card.innerHTML = `
+      <div style="flex:1;">
+        <div style="font-size:15px;font-weight:500;">${r.name}</div>
+        ${r.content ? `<div style="font-size:11px;color:var(--text-muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px;">${r.content.split('\n')[0]}</div>` : '<div style="font-size:11px;color:var(--text-muted);margin-top:2px;">點擊編輯</div>'}
+      </div>
+      <button style="background:none;border:none;color:var(--accent);font-size:13px;cursor:pointer;padding:4px 6px;font-family:inherit;" data-id="${r.id}" class="recipe-edit-btn">編輯</button>
+    `;
+    card.querySelector('.recipe-edit-btn').onclick = (e) => { e.stopPropagation(); openRecipeModal(r.id); };
+    list.appendChild(card);
+  });
+}
+
+function renderPlan() {
+  const plan = getPlan();
+  renderPlanSection('current', plan.current);
+  renderPlanSection('next', plan.next);
+}
+
+function renderPlanSection(which, items) {
+  const el = document.getElementById('plan-' + which + '-list');
+  if (!items.length) {
+    el.innerHTML = '<div style="font-size:12px;color:var(--text-muted);padding:4px 0;">還沒有菜色</div>';
+    return;
+  }
+  el.innerHTML = '';
+  items.forEach((dish, idx) => {
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:0.5px solid var(--border);';
+    const recipe = getRecipes().find(r => r.name === dish);
+    row.innerHTML = `
+      <div style="flex:1;font-size:14px;">${dish}</div>
+      ${recipe && recipe.content ? `<span class="view-recipe-tag" data-id="${recipe.id}" style="font-size:10px;color:var(--accent);background:var(--accent-light);border-radius:4px;padding:2px 7px;cursor:pointer;flex-shrink:0;">食譜 ▶</span>` : ''}
+      <button style="background:none;border:none;color:rgba(80,140,180,0.35);font-size:17px;cursor:pointer;padding:0 2px;" data-which="${which}" data-idx="${idx}" class="plan-del-btn">×</button>
+    `;
+    const tag = row.querySelector('.view-recipe-tag');
+    if (tag) {
+      tag.onclick = () => {
+        const r = getRecipes().find(x => x.id === parseInt(tag.dataset.id));
+        if (!r) return;
+        document.getElementById('view-recipe-title').textContent = r.name;
+        document.getElementById('view-recipe-content').textContent = r.content;
+        document.getElementById('view-recipe-modal').classList.add('open');
+      };
+    }
+    row.querySelector('.plan-del-btn').onclick = () => {
+      getPlan()[which].splice(idx, 1);
+      saveData(); renderPlan();
+    };
+    el.appendChild(row);
+  });
+}
+
+function openRecipeModal(id) {
+  recipeEditingId = id || null;
+  const r = id ? getRecipes().find(x => x.id === id) : null;
+  document.getElementById('recipe-modal-title').textContent = r ? '編輯食譜' : '新增食譜';
+  document.getElementById('recipe-name-input').value = r ? r.name : '';
+  document.getElementById('recipe-content-input').value = r ? (r.content || '') : '';
+  document.getElementById('recipe-modal-delete').style.display = r ? 'block' : 'none';
+  document.getElementById('recipe-modal').classList.add('open');
+  setTimeout(() => document.getElementById('recipe-name-input').focus(), 200);
+}
+
+document.getElementById('recipe-add-btn').onclick = () => openRecipeModal(null);
+document.getElementById('recipe-modal-cancel').onclick = () => document.getElementById('recipe-modal').classList.remove('open');
+document.getElementById('recipe-modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('recipe-modal')) document.getElementById('recipe-modal').classList.remove('open');
+});
+document.getElementById('recipe-modal-save').onclick = () => {
+  const name = document.getElementById('recipe-name-input').value.trim();
+  const content = document.getElementById('recipe-content-input').value.trim();
+  if (!name) { document.getElementById('recipe-name-input').focus(); return; }
+  const recipes = getRecipes();
+  if (recipeEditingId) {
+    const r = recipes.find(x => x.id === recipeEditingId);
+    if (r) { r.name = name; r.content = content; }
+  } else {
+    recipes.push({ id: ++recipeNextId, name, content });
+  }
+  saveData(); renderRecipeList();
+  document.getElementById('recipe-modal').classList.remove('open');
+};
+document.getElementById('recipe-modal-delete').onclick = () => {
+  document.getElementById('recipe-modal').classList.remove('open');
+  showConfirm(`確定要刪除「${getRecipes().find(r=>r.id===recipeEditingId)?.name}」這份食譜嗎？`, () => {
+    appData.recipes = getRecipes().filter(r => r.id !== recipeEditingId);
+    saveData(); renderRecipeList();
+  });
+};
+
+// Plan add
+function openPlanAdd(which) {
+  planTarget = which;
+  document.getElementById('plan-add-title').textContent = which === 'current' ? '加菜 — 這一輪' : '加菜 — 下一輪';
+  document.getElementById('plan-dish-input').value = '';
+  document.getElementById('plan-search-results').style.display = 'none';
+  document.getElementById('plan-search-results').innerHTML = '';
+  document.getElementById('plan-add-modal').classList.add('open');
+  setTimeout(() => document.getElementById('plan-dish-input').focus(), 200);
+}
+
+document.getElementById('plan-dish-input').addEventListener('input', () => {
+  const q = document.getElementById('plan-dish-input').value.trim();
+  const results = document.getElementById('plan-search-results');
+  if (!q) { results.style.display = 'none'; results.innerHTML = ''; return; }
+  const matches = getRecipes().filter(r => r.name.includes(q));
+  if (!matches.length) { results.style.display = 'none'; return; }
+  results.innerHTML = '';
+  matches.forEach(r => {
+    const item = document.createElement('div');
+    item.style.cssText = 'padding:10px 12px;font-size:14px;cursor:pointer;border-bottom:0.5px solid var(--border);display:flex;align-items:center;gap:8px;';
+    item.innerHTML = `<span style="flex:1;">${r.name}</span>${r.content ? '<span style="font-size:10px;color:var(--accent);">有食譜</span>' : ''}`;
+    item.addEventListener('click', () => {
+      document.getElementById('plan-dish-input').value = r.name;
+      results.style.display = 'none';
+    });
+    results.appendChild(item);
+  });
+  results.style.display = 'block';
+});
+
+document.getElementById('plan-add-current').onclick = () => openPlanAdd('current');
+document.getElementById('plan-add-next').onclick = () => openPlanAdd('next');
+document.getElementById('plan-add-cancel').onclick = () => document.getElementById('plan-add-modal').classList.remove('open');
+document.getElementById('plan-add-modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('plan-add-modal')) document.getElementById('plan-add-modal').classList.remove('open');
+});
+document.getElementById('plan-add-confirm').onclick = () => {
+  const name = document.getElementById('plan-dish-input').value.trim();
+  if (!name) return;
+  getPlan()[planTarget].push(name);
+  saveData(); renderPlan();
+  document.getElementById('plan-add-modal').classList.remove('open');
+};
+
+// View recipe modal
+document.getElementById('view-recipe-close').onclick = () => document.getElementById('view-recipe-modal').classList.remove('open');
+document.getElementById('view-recipe-modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('view-recipe-modal')) document.getElementById('view-recipe-modal').classList.remove('open');
+});
+
+// Promote next → current
+document.getElementById('plan-promote').onclick = () => {
+  const plan = getPlan();
+  if (!plan.next.length) return;
+  showConfirm('把「下一輪」升為「這一輪」，並清空「下一輪」？', () => {
+    plan.current = [...plan.next];
+    plan.next = [];
+    saveData(); renderPlan();
+  });
+};
+
+// Init recipeNextId from data
+(function() {
+  const recipes = getRecipes();
+  if (recipes.length) recipeNextId = recipes.reduce((m, r) => Math.max(m, r.id || 0), 0);
+})();
 
 // ===== EXPORT / IMPORT =====
 document.getElementById('export-btn').addEventListener('click', () => {
