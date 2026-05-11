@@ -413,6 +413,13 @@ body {
   </div>
 </div>
 
+<!-- Export/Import bar -->
+<div style="display:flex;gap:8px;padding:8px 16px 0;">
+  <button id="export-btn" style="flex:1;padding:10px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text-muted);font-size:13px;font-family:inherit;cursor:pointer;">匯出備份</button>
+  <label for="import-input" style="flex:1;padding:10px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text-muted);font-size:13px;font-family:inherit;cursor:pointer;text-align:center;display:block;">匯入備份</label>
+  <input type="file" id="import-input" accept=".json" style="display:none;">
+</div>
+
 <!-- CONFIRM DELETE -->
 <div class="modal-overlay" id="confirm-modal">
   <div class="modal-sheet">
@@ -985,6 +992,37 @@ document.getElementById('atf-confirm').onclick = () => {
   renderShopList();
   renderList();
 };
+
+// ===== EXPORT / IMPORT =====
+document.getElementById('export-btn').addEventListener('click', () => {
+  const blob = new Blob([JSON.stringify(appData, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'fridge_backup_' + today() + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+document.getElementById('import-input').addEventListener('change', e => {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      if (typeof data !== 'object' || Array.isArray(data)) throw new Error();
+      showConfirm('匯入後會覆蓋目前資料，換成備份檔的內容，確定嗎？', () => {
+        appData = data;
+        saveData();
+        buildFilterRow();
+        renderList();
+        renderShopList();
+      });
+    } catch { alert('檔案格式不對，請選擇正確的備份檔案'); }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+});
 
 // Init
 buildFilterRow();
